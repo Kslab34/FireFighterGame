@@ -1,0 +1,132 @@
+package game;
+
+import java.awt.Color;
+
+import java.awt.Graphics;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.Random;
+
+import javax.imageio.ImageIO;
+import javax.swing.JPanel;
+
+/************************************************************
+ * Building class that handles the Building GUI
+ * @author Kelby Schulz
+ *
+ ************************************************************/
+public class Building extends JPanel implements Serializable {
+
+	private static final long serialVersionUID = 3941695098824481008L;
+	private int padding = 10;
+	private int height;
+	private int floors;
+	private int windowsPerFloor;
+	private final int OVER;
+	private final int DOWN;
+	private Window[] rooms;
+	private static Random rand = new Random();
+	private Color randomColor = new Color(rand.nextInt(156) + 100,
+			rand.nextInt(100), rand.nextInt(100));
+
+	/**
+	 * Constructor 1 of 1 Creates a JPanel for buildings
+	 * 
+	 * @param floors
+	 * @param windowsPerFloor
+	 */
+	public Building(int floors, int windowsPerFloor) {
+		// Set to absolute layout
+		this.setLayout(null);
+		this.windowsPerFloor = windowsPerFloor;
+		if(floors>7) {
+			floors = 7;
+		}
+		this.floors = floors;
+		this.rooms = new Window[floors * windowsPerFloor];
+		this.height = 64 * floors + padding * floors + padding + 128;
+		OVER = Screen.getWidth() / 2 - windowsPerFloor * 36;
+		DOWN = Screen.getHeight() - height - 120;
+
+		// assign each room a new window object and place it in
+		// the JFrame
+		for (int i = 0, x = 0, y = 0; i < rooms.length; i++) {
+			int startX = 64 * x + padding * (x + 1) + OVER;
+			int startY = 64 * y + padding * (y + 1) + DOWN;
+
+			this.rooms[i] = new Window();
+			this.rooms[i].setBounds(startX, startY, 64, 64);
+			this.add(rooms[i]);
+
+			if (++x == windowsPerFloor) {
+				x = 0;
+				y++;
+			}
+		}
+
+	}// end constructor 1 of 1
+
+	/**
+	 * Paint the building and door on the canvas
+	 */
+	@Override
+	public void paintComponent(Graphics g) {
+		g.setColor(randomColor);
+		int width = 64 * windowsPerFloor + padding * windowsPerFloor + padding;
+		g.fillRect(OVER, DOWN, width, height);
+		try {
+			g.drawImage(ImageIO.read(this.getClass().getResource("Door.png")),
+					(64 * windowsPerFloor + 10 * windowsPerFloor) / 2 + OVER
+							+ 10, DOWN + 64 * floors + 10 * floors + 10, null);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}// end paintComponent()
+
+	/**
+	 * Creates a new random building within a given range
+	 * 
+	 * @param min
+	 *            - the lower range
+	 * @param max
+	 *            - the greater range
+	 * @return a new building between the min and max
+	 */
+	public static Building randomBuilding(int min, int max) {
+		if (min >= max) {
+			max = min;
+			min--;
+		}
+		return new Building(rand.nextInt(max - min) + min, rand.nextInt(max
+				- min)
+				+ min);
+	}// end randomBuilding()
+
+	public int getFloors() {
+		return floors;
+	}
+
+	public int getWindows() {
+		return windowsPerFloor;
+	}
+
+	public Window[] getRooms() {
+		return rooms;
+	}
+
+	/**
+	 * Returns the room following the logical path of the building
+	 * @param index
+	 * @return
+	 */
+	public Window getRoom(int index) {
+		return rooms[index];
+	}
+
+	@Override
+	public String toString() {
+		return "Building " + " \nTotal Floors: " + floors + " Windows/Floor: "
+				+ windowsPerFloor;
+	}
+
+}
