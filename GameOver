@@ -1,0 +1,138 @@
+package game;
+
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.stream.Stream;
+
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+
+public class GameOver extends JPanel {
+	private int score;
+
+	private static final long serialVersionUID = -605592315181462119L;
+	private JTextField initals;
+
+	private JTextArea textArea;
+
+	public GameOver(int score) {
+		this.score = score;
+		setLayout(new BorderLayout(0, 0));
+
+		JLabel lblGameOver = new JLabel("Game Over");
+		lblGameOver.setBorder(new EmptyBorder(5, 0, 0, 0));
+		lblGameOver.setFont(new Font("Stencil", Font.PLAIN, 24));
+		lblGameOver.setHorizontalAlignment(SwingConstants.CENTER);
+		add(lblGameOver, BorderLayout.NORTH);
+
+		JPanel scoreUpdatePanel = new JPanel();
+		add(scoreUpdatePanel, BorderLayout.SOUTH);
+		scoreUpdatePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+
+		createInitials();
+		scoreUpdatePanel.add(initals);
+
+		JButton btnSubmit = createSubmit();
+		scoreUpdatePanel.add(btnSubmit);
+
+		textArea = getScoreBoard();
+		add(textArea, BorderLayout.CENTER);
+
+	}
+
+	private JButton createSubmit() {
+		JButton btnSubmit = new JButton("SUBMIT");
+		btnSubmit.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				try {
+					FileWriter fw = new FileWriter("src/test/HighScores.csv");
+					StringBuilder sb = new StringBuilder();
+					sb.append(initals.getText());
+					sb.append(',');
+					sb.append(score);
+					sb.append('\n');
+					
+					textArea = getScoreBoard();
+					fw.write(sb.toString());
+					fw.close();
+					System.out.println("done!");
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		return btnSubmit;
+	}
+
+	private void createInitials() {
+		initals = new JTextField();
+		initals.setColumns(3);
+
+	}
+
+	/**
+	 * Loads the scores from a file.
+	 */
+	private JTextArea getScoreBoard() {
+		JTextArea txtrHighScoresHere = new JTextArea();
+		txtrHighScoresHere.setText("High Scores Here!");
+		txtrHighScoresHere.setEditable(false);
+		try (Scanner reader = new Scanner(this.getClass().getResourceAsStream(
+				"HighScores.csv"))) {
+			Map<String, Integer> scores = new LinkedHashMap<String, Integer>();
+			while (reader.hasNextLine()) {
+				String line = reader.nextLine();
+				String[] data = line.split(",");
+				scores.put(data[0], Integer.parseInt(data[1]));
+			}
+			sortByValue(scores);
+			Iterator it = scores.entrySet().iterator();
+			int count = 1;
+			while (it.hasNext()) {
+				Map.Entry pair = (Map.Entry) it.next();
+				txtrHighScoresHere
+						.setText(txtrHighScoresHere.getText() + "\n" + count
+								+ ".	" + pair.getKey() + "		" + pair.getValue());
+				it.remove(); // avoids a ConcurrentModificationException
+				if (count >= 10)
+					break;
+				count++;
+			}
+		}
+		return txtrHighScoresHere;
+	}
+
+	/**
+	 * Used to sort high Scores from:
+	 * http://stackoverflow.com/questions/109383/sort
+	 * -a-mapkey-value-by-values-java
+	 * 
+	 * @param map
+	 * @return
+	 */
+	public static <K, V extends Comparable<? super V>> Map<K, V> sortByValue(
+			Map<K, V> map) {
+		Map<K, V> result = new LinkedHashMap<>();
+		Stream<Map.Entry<K, V>> st = map.entrySet().stream();
+
+		st.sorted(Map.Entry.comparingByValue()).forEachOrdered(
+				e -> result.put(e.getKey(), e.getValue()));
+
+		return result;
+	}
+
+}
