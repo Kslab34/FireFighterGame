@@ -1,0 +1,128 @@
+package game;
+
+import java.security.SecureRandom;
+import java.util.Random;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+
+public class Window extends JButton {
+
+	private static final long serialVersionUID = 3464372535672323607L;
+	private Icon image[] = { new ImageIcon(this.getClass().getResource("BoyWindowNOfirePNG.png")),
+			new ImageIcon(this.getClass().getResource("GirlWindowNOFirePNG.png")),
+			new ImageIcon(this.getClass().getResource("BlankWindow.png")),
+			new ImageIcon(this.getClass().getResource("LadderNOBG.png")) };
+	public boolean ladder = false;
+	public boolean person = false;
+	public boolean fire = false;
+	public boolean moved = false;
+	public Fire onFire;
+	private Random rand = new SecureRandom();
+
+	/************************************************************
+	 * Window Class for the rooms in the building
+	 * 
+	 * @author Kelby Schulz
+	 *
+	 ************************************************************/
+	public Window() {
+		Random r = new Random();
+		if (r.nextInt(7) == 4) {
+			person = true;
+			this.setIcon(image[rand.nextInt(2)]);
+		}
+		if (!person) {
+			fire = r.nextBoolean();
+		}
+
+		if (fire) {
+			onFire = new Fire();
+			this.setIcon(onFire.getFireImage());
+		}
+		if (!fire && !person) {
+			this.setIcon(image[2]);
+		}
+	}// end constructor 1 of 1
+
+	public boolean hasPerson() {
+		if (person) {
+			this.setIcon(image[rand.nextInt(2)]);
+		}
+		return person;
+	}
+
+	public boolean hasFire() {
+		if (fire) {
+			onFire = new Fire();
+			this.setIcon(onFire.getFireImage());
+		}
+		return fire;
+	}
+
+	public boolean hasLadder() {
+		if (ladder) {
+			this.setIcon(image[3]);
+		}
+		return ladder;
+	}
+
+	/**
+	 * Handles the logic for settng the ladder
+	 * 
+	 * @param ladder
+	 */
+	public void setLadder(boolean ladder) {
+		this.ladder = ladder;
+		if (ladder) {
+			this.setIcon(image[3]);
+		}
+	}
+
+	/**
+	 * Handles the logic for setting a new person
+	 * 
+	 * @param person
+	 */
+	public void setPerson(boolean person) {
+		this.person = person;
+		if (person) {
+			this.setIcon(image[rand.nextInt(2)]);
+		} else {
+			this.setIcon(image[2]);
+		}
+	}
+
+	/**
+	 * Checks if the window has anything in it
+	 * 
+	 * @return
+	 */
+	public boolean isEmpty() {
+		return !(fire || ladder || person);
+	}
+
+	/**
+	 * Handles logic for setting the window on fire
+	 * 
+	 * @param fire
+	 * @return an integer 1 if a person was killed 0 if nothing happened
+	 */
+	public int setFire(boolean fire) {
+		this.fire = fire;
+		if (person && fire) {
+			onFire = new Fire();
+			this.person = false;
+			this.setIcon(onFire.getFireImage());
+			return 1;
+		} else if (fire && !person) {
+			onFire = new Fire();
+			this.setIcon(onFire.getFireImage());
+			return 0;
+		} else {
+			this.setIcon(image[2]);
+			return 0;
+		}
+	}
+}
