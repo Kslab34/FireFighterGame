@@ -1,0 +1,362 @@
+package game;
+
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.EventQueue;
+import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.border.EmptyBorder;
+
+public class Game extends JFrame {
+
+	private static final long serialVersionUID = 1L;
+	private JPanel screen;
+	private JPanel layoutPanel;
+	@SuppressWarnings("unused")
+	private Firetruck truck;
+	private int score = 0;
+	private int cardIndex = 2;
+
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					Game frame = new Game();
+					frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+					frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	public Game() {
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setBounds(100, 100, 450, 300);
+		screen = new JPanel();
+		screen.setBorder(new EmptyBorder(5, 5, 5, 5));
+		setContentPane(screen);
+		screen.setLayout(new BorderLayout(0, 0));
+
+		createLayoutPanel();
+		screen.add(layoutPanel);
+	}
+
+	private void createLayoutPanel() {
+		layoutPanel = new JPanel();
+		layoutPanel.setLayout(new CardLayout());
+
+		layoutPanel.add(new TitleScreen(), 0);
+		layoutPanel.add(new Level(), 1);
+	}
+
+	/***************************************************
+	 * Private inner class for title screen to the game
+	 * 
+	 * @author Brianna Graham
+	 *
+	 ****************************************************/
+	class TitleScreen extends JPanel {
+
+		private static final long serialVersionUID = 5744063925219779130L;
+		private JTextField txtPassword;
+
+		public TitleScreen() {
+			setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+			JButton btnStart = createStartBtn();
+			add(btnStart);
+
+			createPassField();
+			add(txtPassword);
+
+			JButton btnLoad = createBtnLoad();
+			add(btnLoad);
+
+			JButton btnQuit = createBtnQuit();
+			add(btnQuit);
+
+		}// end constructor
+
+		private JButton createBtnQuit() {
+			JButton btnQuit = new JButton("Quit");
+			btnQuit.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					System.exit(0);
+				}
+			});
+			return btnQuit;
+		}
+
+		private JButton createBtnLoad() {
+			JButton btnLoad = new JButton("load");
+			btnLoad.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					truck = Firetruck.load(txtPassword.getText());
+					CardLayout cl = (CardLayout) (layoutPanel.getLayout());
+					cl.next(layoutPanel);
+				}
+			});
+			return btnLoad;
+		}
+
+		private void createPassField() {
+			txtPassword = new JTextField();
+			txtPassword.setText("PASSWORD");
+			txtPassword.setColumns(10);
+		}
+
+		private JButton createStartBtn() {
+			JButton btnStart = new JButton("Start");
+			btnStart.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					CardLayout cl = (CardLayout) (layoutPanel.getLayout());
+					cl.next(layoutPanel);
+				}
+			});
+			return btnStart;
+		}
+
+	}// end inner class TitleScreen
+
+	/******************************************************************
+	 * Inner class level handles game logic
+	 * @author Brianna
+	 ******************************************************************/
+	class Level extends JPanel {
+
+		private static final long serialVersionUID = -300356968138025187L;
+		private JTextField passField;
+		private Firetruck firetruck;
+		private JPanel panel;
+		private int deathCount = 0;
+		private int savedCount = 0;
+		private int peopleCount = 0;
+		private Building randBuilding;
+
+		public Level() {
+			setLayout(new BorderLayout(0, 0));
+
+			randBuilding = createBuilding();
+			add(randBuilding, BorderLayout.CENTER);
+
+			panel = createMenu();
+			panel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+
+			firetruck = new Firetruck(randBuilding);
+			assignWindowFunction(randBuilding);
+
+			JButton btnMove = createBtnMove(randBuilding);
+			panel.add(btnMove);
+
+			JButton btnGetPassword = createGetPassBtn();
+			panel.add(btnGetPassword);
+
+			createPassField();
+			panel.add(passField);
+
+		}//end Constructor 1 of 1
+
+		/**
+		 * Creates the move button on the bottom of the menubar,
+		 * handles most of the game logic
+		 * @param b
+		 * @return
+		 */
+		private JButton createBtnMove(Building b) {
+			JButton btnMove = new JButton("Move");
+			
+			/************
+			 * GAME LOGIC
+			 ************/
+			btnMove.addActionListener(new ActionListener() {
+				int run = 0;
+				List<Integer> peopleIndex = new ArrayList<Integer>();
+				List<Integer> fireIndex = new ArrayList<Integer>();
+				List<Integer> ladderIndex = new ArrayList<Integer>();
+
+				//Get the initial data for the level
+				private void initData() {
+					for (Window current : b.getRooms()) {
+						if (current.hasPerson())
+							peopleCount++;
+					}
+				}
+
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					if(run==0)
+						initData();
+					run++;
+					peopleIndex.removeAll(peopleIndex);
+					fireIndex.removeAll(fireIndex);
+					ladderIndex.removeAll(ladderIndex);
+					
+					// Get the indices for important windows
+					for (Window current : b.getRooms()) {
+						if (current.hasPerson()) {
+							peopleIndex.add(Arrays.asList(b.getRooms())
+									.indexOf(current));
+						} else if (current.hasFire()) {
+							fireIndex.add(Arrays.asList(b.getRooms()).indexOf(
+									current));
+						} else if (current.hasLadder()) {
+							ladderIndex.add(Arrays.asList(b.getRooms())
+									.indexOf(current));
+						}
+					}
+					
+					// People move first
+					for (int index : peopleIndex) {
+						int closest = closestExit(index);
+						if (index + closest < b.getRooms().length
+								&& index + closest > 0) {
+							if (b.getRoom(index + closest).isEmpty()) {
+								b.getRoom(index).setPerson(false);
+								b.getRoom(index + closest).setPerson(true);
+							} else if (b.getRoom(index + closest).hasLadder()) {
+								b.getRoom(index).setPerson(false);
+								savedCount++;
+							}
+						} else {
+							b.getRoom(index).setPerson(false);
+							savedCount++;
+						}
+					}
+					
+					// fire moves at random
+					for (int index : fireIndex) {
+						Window fire = b.getRoom(index);
+						int direction = fire.onFire.spread();
+						if (index + direction < b.getRooms().length
+								&& index + direction >= 0) {
+							if (!b.getRoom(index + direction).hasLadder()) {
+								deathCount += b.getRoom(index + direction)
+										.setFire(true);
+							}
+						}
+					}
+					
+					//check to see if game over or level win
+					if (deathCount >= 3) {
+						layoutPanel.add(new GameOver(score), cardIndex);
+						CardLayout cl = (CardLayout) (layoutPanel.getLayout());
+						cl.next(layoutPanel);
+					}
+					if (savedCount >= peopleCount - deathCount) {
+						
+						layoutPanel.add(new Level(), cardIndex++);
+						CardLayout cl = (CardLayout) (layoutPanel.getLayout());
+						cl.next(layoutPanel);
+						randBuilding = createBuilding();
+					}
+					score += savedCount;
+				}
+
+				/**
+				 * returns 1 if the closest exit is to the right, and -1 if the
+				 * closest exit is to the left
+				 * 
+				 * @return
+				 */
+				private int closestExit(int position) {
+					ladderIndex.add(b.getRooms().length-1);
+					if (ladderIndex.size() > 0) {
+						int distance = Math.abs(ladderIndex.get(0) - position);
+						int index = 0;
+						for (int c = 1; c < ladderIndex.size(); c++) {
+							int cdistance = Math.abs(ladderIndex.get(c)
+									- position);
+							if (cdistance < distance) {
+								index = c;
+								distance = cdistance;
+							}
+						}
+						int theNumber = ladderIndex.get(index);
+						if (theNumber >= position)
+							return 1;
+						else
+							return -1;
+					}
+					return 1;
+				}
+
+			});//end ActionListener()
+			
+			return btnMove;
+		}//end createBtnMove()
+
+		/**
+		 * Handles user interaction with windows
+		 * @param randBuilding
+		 */
+		private void assignWindowFunction(Building randBuilding) {
+			for (Window current : randBuilding.getRooms()) {
+				current.addActionListener(new ActionListener() {
+					@Override
+					public synchronized void actionPerformed(ActionEvent e) {
+						if (current.isEmpty() && firetruck.laders > 0) {
+							firetruck.laders--;
+							current.setLadder(true);
+						} else if (current.hasFire()
+								&& firetruck.getWater() > 0) {
+							--firetruck.water;
+							current.setFire(false);
+						}
+					}
+				});
+			}
+		}//end assignWindowFunction
+
+		private JPanel createMenu() {
+			JPanel panel = new JPanel();
+			add(panel, BorderLayout.SOUTH);
+			return panel;
+		}
+
+		private Building createBuilding() {
+			Building randBuilding = Building.randomBuilding(5, 10);
+			return randBuilding;
+		}
+
+		/**
+		 * Creates the get password button to retrieve the password and save the
+		 * game
+		 * 
+		 * @return
+		 */
+		private JButton createGetPassBtn() {
+			JButton btnGetPassword = new JButton("Save");
+			btnGetPassword.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					String password = firetruck.getLoadString();
+					System.out.println(firetruck.save());
+					System.out.println(password);
+					passField.setText(password);
+
+				}
+			});
+			return btnGetPassword;
+		}
+
+		/**
+		 * Creates the password field that shows the password
+		 */
+		private void createPassField() {
+			passField = new JTextField();
+			passField.setEditable(false);
+			passField.setColumns(10);
+		}
+
+	}
+
+}// end class
